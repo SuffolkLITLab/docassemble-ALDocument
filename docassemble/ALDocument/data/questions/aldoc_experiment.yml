@@ -3,22 +3,49 @@ modules:
   - .al_document
 ---
 objects:
-  - template1: ALDocument.using(enabled=True, filename="template1")
-  - template2: ALDocument.using(enabled=True, filename="template2")
+  - template1: ALDocument.using(filename="template1")
+  - template2: ALDocument.using(filename="template2")
+  - hello_world: ALDocument.using(filename="hello")
 ---
 objects:
-  - court_bundle: ALDocumentBundle.using(elements=[template1,template2], filename="court_bundle.pdf")
+  - court_bundle: ALDocumentBundle.using(elements=[template1,template2,hello_world], filename="court_bundle.pdf")
 ---
 mandatory: True
+code: |
+  template1.enabled
+  preview
+  download
+---
+question: |
+  Which documents do you want?
+fields:
+  - Template 1: template1.enabled
+    datatype: yesno
+  - Template 2: template2.enabled
+    datatype: yesno
+---
+question: |
+  How old are you?
+fields:
+  - no label: age
+    datatype: integer
+---
+code: |
+  hello_world.enabled = age > 10
+---
+continue button field: preview
+question: |
+  Test
+subquestion: |
+  ${ court_bundle.preview() }
+---
+event: download
 question: |
   Test
 subquestion: |
   ${ court_bundle.as_pdf() }
   
 attachment code: court_bundle.as_flat_list()
-#---
-#objects:
-#  - template1: DADict
 ---
 attachment:
   - variable name: template1[i]
@@ -29,14 +56,24 @@ attachment:
       
       Some cover page info
 ---
+question: |
+  Sign below
+signature: user_signature  
+---
 attachment:
   - variable name: template2[i]
     content: |
       Example 2
+      
+      % if i=='final':
+      ${ user_signature }
+      % endif
 ---
 attachment:
   - name: A *hello world* document
     filename: Hello_World_Document
-    variable name: hello_file
+    variable name: hello_world[i]
     content: |
       Hello, world!
+      
+      I only appear if you are older than 10

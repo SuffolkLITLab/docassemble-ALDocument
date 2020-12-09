@@ -33,7 +33,7 @@ class ALDocument(DADict):
     super(ALDocument, self).init(*pargs, **kwargs)
  
   def as_pdf(self, key='final'):
-    return pdf_concatenate(self.as_list(), filename=self.filename)
+    return pdf_concatenate(self.as_list(key=key), filename=self.filename)
 
   def as_list(self, key='final'):
     if hasattr(self, 'need_addendum') and self.need_addendum:
@@ -66,6 +66,9 @@ class ALDocumentBundle(DAList):
   def as_pdf(self, key='final'):
     return pdf_concatenate(self.as_flat_list(key=key), filename=self.filename)
   
+  def preview(self):
+    return self.as_pdf(key='preview')
+  
   def as_flat_list(self, key='final'):
     """
     Returns the nested bundle as a single flat list.
@@ -88,6 +91,9 @@ class ALDocumentBundle(DAList):
     Returns the nested bundles as a list of PDFs that is only one level deep.
     """
     return [document.as_pdf(key=key) for document in self.templates]
+  
+  def as_html(self, key='final'):
+    pass
     
 class ALDocumentBundleDict(DADict):
   """
