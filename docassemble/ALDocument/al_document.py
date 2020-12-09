@@ -1,4 +1,4 @@
-from docassemble.base.util import DADict, DAObject, DAFile, DAFileCollection, DAFileList
+from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, pdf_concatenate
 
 class ALAddendum(DAObject):
   pass
@@ -31,18 +31,17 @@ class ALDocument(DADict):
   """
   def init(self, *pargs, **kwargs):
     super(ALDocument, self).init(*pargs, **kwargs)
-    self.object_type = DAFile
  
   def as_pdf(self, key='final'):
     return pdf_concatenate(self.as_list(), filename=self.filename)
 
   def as_list(self, key='final'):
-    if getattr(self, 'need_addendum'):
+    if hasattr(self, 'need_addendum') and self.need_addendum:
       return [self[key], self['addendum']]
     else:
       return [self[key]]
 
-class ALDocumentBundle(DAObject):
+class ALDocumentBundle(DAList):
   """
   Object representing a bundle of ALDocuments in a specific order. Used when
   it is helpful to deliver a single, printable collection of multiple templates to an enduser.
@@ -57,9 +56,11 @@ class ALDocumentBundle(DAObject):
   required attribute: filename
   optional attribute: enabled
   required attribute: templates: a list of ALDocuments or ALBundles
-  """"
+  """
   def init(self, *pargs, **kwargs):
     super(ALDocumentBundle, self).init(*pargs, **kwargs)
+    self.auto_gather=False
+    self.gathered=True
     # self.initializeAttribute('templates', ALBundleList)
     
   def as_pdf(self, key='final'):
@@ -73,60 +74,50 @@ class ALDocumentBundle(DAObject):
     # If this is a simple document node, check if this individual template is enabled.
     # Otherwise, call the bundle's as_list() method to show all enabled templates.
     # Unpack the list of documents at each step so this can be concatenated into a single list
-    return [*document.as_list(key=key) for document in self.templates if True if isinstance(document, ALDocumentBundle) else document.enabled]
-  
+    flat_list = []
+    for document in self:
+      if isinstance(document, ALDocumentBundle):
+        flat_list.extend(document.as_list(key=key))
+      elif document.enabled: # base case
+        flat_list.extend(document.as_list(key=key))
+                         
+    return flat_list
+ 
   def as_pdf_list(self, key='final'):
     """
     Returns the nested bundles as a list of PDFs that is only one level deep.
     """
     return [document.as_pdf(key=key) for document in self.templates]
     
-class ALBundleDict(DADict):
+class ALDocumentBundleDict(DADict):
   """
   A dictionary with named bundles of ALDocuments.
   In the assembly line, we expect to find two predetermined bundles:
   court_bundle and user_bundle.
+  
+  It may be helpful in some circumstances to have a "bundle" of bundles. E.g.,
+  you may want to present the user multiple combinations of documents for
+  different scenarios.
   """
   def init(self, *pargs, **kwargs):
     super(ALBundleList, self).init(*pargs, **kwargs)
     self.auto_gather=False
     self.gathered=True
     self.object_type = ALBundle
-    
-class ALDocumentDict(DADict):
-  """
-  Used to store a list of documents with a known name that can be enabled/disabled at runtime.
-  
-  The attribute `bundles` is a dictionary of ALBundles. Each bundle represents a set of documents
-  that might be downloaded for a particular purpose.
-  
-  Interview author will interact with the object like this:
-  
-  ---
-  objects:
-    - court_bundle: ALDocumentBundle.using(filename='my_motion.pdf', templates=[cover_page,motion_to_compel,affidavit_of_indigency])
-    - user_bundle: ALDocumentBundle.using(filename='my_motion.pdf', templates=[motion_to_compel_instructions,motion_to_compel,affidavit_of_indigency])
-  ---
-  objects:
-    - my_documents: ALDocumentDict.using(bundles=ALBundleDict.using(elements={'court_bundle': court_bundle, 'user_bundle': user_bundle}))
-  """
-  def init(self, *pargs, **kwargs):
-    super(ALDocumentDict, self).init(*pargs, **kwargs)
-    self.object_type = ALDocument    
-    # Disable auto gathering
-    self.auto_gather=False
-    self.gathered=True
-    self.initializeAttribute('bundles',ALBundleDict) 
-    
-  def preview(format=PDF, bundle='user_bundle'):
+    if not hasattr(self, 'gathered'):
+      self.gathered = True
+    if not hasattr(self, 'auto_gather'):
+      self.auto_gather=False
+
+  def preview(format='PDF', bundle='user_bundle'):
     """
     Create a copy of the document as a single PDF that is suitable for a preview version of the 
     document (before signature is added).
     """
-    return self.bundles.get(bundle).as_pdf(key='preview', format=format)
+    return self[bundle].as_pdf(key='preview', format=format)
   
-  def as_attachment(format=PDF, bundle='court_bundle'):
+  def as_attachment(format='PDF', bundle='court_bundle'):
     """
     Return a list of PDF-ified documents, suitable to make an attachment to send_mail.
     """
-    return self.bundles.get(bundle).as_pdf_list(key='final')
+    return self[bundle].as_pdf_list(key='final')
