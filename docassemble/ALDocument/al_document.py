@@ -1,4 +1,4 @@
-from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate
+from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict
 
 class ALAddendumField(DAObject):
   """
@@ -59,42 +59,40 @@ class ALAddendumField(DAObject):
     else:
       return [] # TODO
 
-class ALAddendumSection(DAList):
+class ALAddendumFieldDict(DAOrderedDict):
   """
-  Required attributes:
-    - title
-    - elements
+  optional:
+    - style: if set to "overflow_only" will only display the overflow text
   """
   def init(self, *pargs, **kwargs):
-    super(ALAddendumSection, self).init(*pargs, **kwargs)  
+    super(ALAddendumFieldDict, self).init(*pargs, **kwargs)  
     self.object_type = ALAddendumField
     self.auto_gather=False
+    if not hasattr(self, 'style'):
+      self.style = 'overflow_only'
+    if hasattr(self, 'data'):
+      self.from_list(data)
+      del self.data      
   
+  def from_list(self, data):
+    for entry in data:
+      new_field = self.initializeObject(entry['field_name'], ALAddendumField)
+      new_field.field_name = entry['field_name']
+      new_field.overflow_trigger = entry['overflow_trigger']
+      
   def defined_fields(self, style='overflow_only'):
     """
     Return a filtered list of just the defined fields.
     If the "style" is set to overflow_only, only return the overflow values.
     """
     if style == 'overflow_only':
-      return [field for field in self.elements if defined(field.field_name) and len(field.overflow_value())]
+      return [field for field in self.elements.values() if defined(field.field_name) and len(field.overflow_value())]
     else:
-      return [field for field in self.elements if defined(field.field_name)]
-
-class ALAddendumSectionList(DAList):
-  """
-  optional:
-    - style: if set to "overflow_only" will only display the overflow text
-  """
-  def init(self, *pargs, **kwargs):
-    super(ALAddendumSectionList, self).init(*pargs, **kwargs)  
-    self.object_type = ALAddendumSection
-    self.auto_gather=False
-    if not hasattr(self, 'style'):
-      self.style = 'overflow_only'
+      return [field for field in self.elements.values() if defined(field.field_name)]
     
-  def defined_sections(self):
-    if self.style == 'overflow_only':    
-      return [section for section in self.elements if len(section.defined_fields(style=self.style))]
+  #def defined_sections(self):
+  #  if self.style == 'overflow_only':    
+  #    return [section for section in self.elements if len(section.defined_fields(style=self.style))]
   
 class ALDocument(DADict):
   """
@@ -125,7 +123,7 @@ class ALDocument(DADict):
   """
   def init(self, *pargs, **kwargs):
     super(ALDocument, self).init(*pargs, **kwargs)
-    self.initializeAttribute('sections',ALAddendumSectionList)
+    self.initializeAttribute('overflow_fields',ALAddendumFieldDict)
  
   def as_pdf(self, key='final'):
     return pdf_concatenate(self.as_list(key=key), filename=self.filename)

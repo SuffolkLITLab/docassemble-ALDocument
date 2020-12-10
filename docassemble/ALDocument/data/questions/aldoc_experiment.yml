@@ -14,6 +14,7 @@ mandatory: True
 code: |
   template1.enabled
   field1
+  template2.overflow_fields.gathered
   preview
   download
 ---
@@ -31,21 +32,19 @@ fields:
     datatype: area
 ---
 code: |
-  section = template2.sections.appendObject()
-  section.title = "Section 1"
-  
-  field = section.appendObject() 
-  field.field_name='field1'
-  field.overflow_trigger=20
-  field = section.appendObject() 
-  field.field_name='field2'
-  field.overflow_trigger=20
-  field = section.appendObject() 
-  field.field_name='field3'
-  field.overflow_trigger=20
-
-  section.gathered=True
-  template2.sections.gathered = True
+  template2.overflow_fields.from_list([
+    {'field_name':'field1', 
+     'overflow_trigger': 20},
+    {'field_name': 'field2',
+     'overflow_trigger': 20},
+    {'field_name': 'field3',
+     'overflow_trigger': 20}
+     ])
+  template2.overflow_fields.gathered=True
+---
+continue button field: debug_overflow
+question: |
+  ${ template2.overflow_fields }
 ---
 question: |
   Which documents do you want?
@@ -98,11 +97,11 @@ attachment:
     content: |
       Example 2
       
-      Field1: ${ field1.safe_value() }
+      Field1: ${ template2.overflow_fields['field1'].safe_value() }
      
-      Field2: ${ field2.safe_value() }
+      Field2: ${ template2.overflow_fields['field2'].safe_value() }
       
-      Field3: ${ field3.safe_value() }
+      Field3: ${ template2.overflow_fields['field3'].safe_value() }
       
       % if i=='final':
       ${ user_signature }
@@ -125,13 +124,9 @@ attachment:
     content: |
       # Addendum for ${ x.filename }
       
-      % for section in x.sections:
-      ## ${ section.title }
-      
-      % for field in section.defined_fields():
+      % for field in x.overflow_fields.defined_fields():
       ${ field.field_name }: 
       
       > ${ field.overflow_value() }
       
-      % endfor
       % endfor
