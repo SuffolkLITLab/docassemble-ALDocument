@@ -3,13 +3,13 @@ modules:
   - .al_document
 ---
 objects:
-  - template1: ALDocument.using(filename="template1", has_addendum=False)
-  - template2: ALDocument.using(filename="template2", has_addendum=True, default_overflow_message = " (see addendum)")
-  - hello_world: ALDocument.using(filename="hello", has_addendum=False)
+  - template1: ALDocument.using(title="Template 1", filename="template1", has_addendum=False)
+  - template2: ALDocument.using(title="Template 2", filename="template2", has_addendum=True, default_overflow_message = " (see addendum)")
+  - hello_world: ALDocument.using(title="Hello, World", filename="hello", has_addendum=False)
   - field4: DAList.using(there_are_any=True)
 ---
 objects:
-  - court_bundle: ALDocumentBundle.using(elements=[template1,template2,hello_world], filename="court_bundle.pdf")
+  - court_bundle: ALDocumentBundle.using(elements=[template1,template2,hello_world], filename="court_bundle.pdf", title="Forms to download and deliver to court")
 ---
 mandatory: True
 code: |
@@ -84,9 +84,11 @@ event: download
 question: |
   Test
 subquestion: |
-  ${ court_bundle.as_pdf() }
   
-  ${ court_bundle.as_pdf_list() }
+  ${ court_bundle.download_buttons_html() }
+  
+  Or, download as one file:  
+  ${ court_bundle.download_button_html() }
   
 attachment code: court_bundle.as_flat_list()
 ---

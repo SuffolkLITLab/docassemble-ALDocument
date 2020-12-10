@@ -1,4 +1,4 @@
-from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict
+from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html
 
 class ALAddendumField(DAObject):
   """
@@ -141,6 +141,7 @@ class ALDocument(DADict):
   
   Required attributes:
     - filename: name used for output PDF
+    - title: display name for the output PDF
     - enabled
     - has_addendum: set to False if the document never has overflow, like for a DOCX template
   
@@ -156,7 +157,13 @@ class ALDocument(DADict):
       self.default_overflow_message = ''
  
   def as_pdf(self, key='final'):
-    return pdf_concatenate(self.as_list(key=key), filename=self.filename)
+    if self.filename.endswith('.pdf'):
+      ending = ''
+    else:
+      ending = '.pdf'
+    pdf = pdf_concatenate(self.as_list(key=key), filename=self.filename + ending)
+    pdf.title = self.title
+    return pdf
 
   def as_list(self, key='final'):
     if self.has_addendum and self.has_overflow():
@@ -198,6 +205,7 @@ class ALDocumentBundle(DAList):
   
   required attributes: 
     - filename
+    - title
   optional attribute: enabled
   """
   def init(self, *pargs, **kwargs):
@@ -207,7 +215,13 @@ class ALDocumentBundle(DAList):
     # self.initializeAttribute('templates', ALBundleList)
     
   def as_pdf(self, key='final'):
-    return pdf_concatenate(self.as_flat_list(key=key), filename=self.filename)
+    if self.filename.endswith('.pdf'):
+      ending = ''
+    else:
+      ending = '.pdf'
+    pdf = pdf_concatenate(self.as_flat_list(key=key), filename=self.filename + ending)
+    pdf.title = self.title
+    return pdf
   
   def preview(self):
     return self.as_pdf(key='preview')
@@ -235,8 +249,28 @@ class ALDocumentBundle(DAList):
     """
     return [document.as_pdf(key=key) for document in self]
   
-  def as_html(self, key='final'):
-    pass
+  def download_button_html(self, key='final'):
+    html = "<table>"
+    download = self.as_pdf(key=key)
+    html += "<tr>"
+    html += "<td>" + download.title + "</td>"
+    html += "<td>" + action_button_html(download.url_for(attachment=True), label="Download") + "</td>"
+    html += "<td>" + action_button_html(download.url_for(), label="View") + "</td>"
+    html += "</tr>"        
+    html += "</table>"
+    return html
+    
+  
+  def download_buttons_html(self, key='final'):
+    html = "<table>"
+    for download in self.as_pdf_list(key=key):
+      html += "<tr>"
+      html += "<td>" + download.title + "</td>"
+      html += "<td>" + action_button_html(download.url_for(attachment=True), label="Download") + "</td>"
+      html += "<td>" + action_button_html(download.url_for(), label="View") + "</td>"
+      html += "</tr>"        
+    html += "</table>"
+    return html
     
 class ALDocumentBundleDict(DADict):
   """
