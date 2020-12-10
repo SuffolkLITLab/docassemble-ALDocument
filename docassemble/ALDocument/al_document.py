@@ -1,61 +1,161 @@
-from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, pdf_concatenate
+from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate
 
-class ALAddendum(DAObject):
-  pass
+class ALAddendumField(DAObject):
+  """
+  Required attributes:
+    - field_name->str represents the name of a docassemble variable
+    - field_style->"list"|"table"|"string" (optional: defaults to "string")
+    - overflow_trigger->int
+  Optional:    
+    - headers->dict(attribute: display label for table)
+  """
+  def init(self, *pargs, **kwargs):
+    super(ALAddendumField, self).init(*pargs, **kwargs)
 
+  def overflow_value(self):
+    """
+    Try to return just the portion of the variable (list-like object or string)
+    that exceeds the overflow trigger. Otherwise, return empty string.
+    """
+    try:
+      if len(self.value_if_defined()) > self.overflow_trigger:
+        return self.value_if_defined()[self.overflow_trigger:]
+      else:
+        return ""
+    except:
+      return ""
+
+  def safe_value(self):
+    """
+    Try to return just the portion of the variable
+    that is _shorter than_ the overflow trigger. Otherwise, return empty string.
+    """
+    try:
+      if len(self.value_if_defined()) > self.overflow_trigger:
+        return self.value_if_defined()[:self.overflow_trigger]
+      else:
+        return self.value_if_defined()
+    except:
+      return ""
+    
+    
+  def value_if_defined(self):
+    """
+    Return the value of the field if it is defined, otherwise return an empty string.
+    """
+    if defined(self.field_name):
+      return value(self.field_name)
+    return ""
+  
+  def __str__(self):
+    return str(self.value_if_defined())
+    
+  def columns(self):
+    """
+    Return a list of the columns in this object.
+    """
+    if hasattr(self, headers):
+      return self.headers
+    else:
+      return [] # TODO
+
+class ALAddendumSection(DAList):
+  """
+  Required attributes:
+    - title
+    - elements
+  """
+  def init(self, *pargs, **kwargs):
+    super(ALAddendumSection, self).init(*pargs, **kwargs)  
+    self.object_type = ALAddendumField
+    self.auto_gather=False
+  
+  def defined_fields(self, style='overflow_only'):
+    """
+    Return a filtered list of just the defined fields.
+    If the "style" is set to overflow_only, only return the overflow values.
+    """
+    if style == 'overflow_only':
+      return [field for field in self.elements if defined(field.field_name) and len(field.overflow_value())]
+    else:
+      return [field for field in self.elements if defined(field.field_name)]
+
+class ALAddendumSectionList(DAList):
+  """
+  optional:
+    - style: if set to "overflow_only" will only display the overflow text
+  """
+  def init(self, *pargs, **kwargs):
+    super(ALAddendumSectionList, self).init(*pargs, **kwargs)  
+    self.object_type = ALAddendumSection
+    self.auto_gather=False
+    if not hasattr(self, 'style'):
+      self.style = 'overflow_only'
+    
+  def defined_sections(self):
+    if self.style == 'overflow_only':    
+      return [section for section in self.elements if len(section.defined_fields(style=self.style))]
+  
 class ALDocument(DADict):
   """
   An opinionated collection of typically three attachment blocks:
   1. The final version of a document, at typical key "final"
   2. The preview version of a document, at typical key "preview"
-  2.5 Any alternate versions of the document, at any key other than 'addendum'
-  3. An addendum of a document, at mandatory key "addendum"
+  3. An addendum of a document, at the attribute `addendum`
   
   Each form that an interview generates will get its own ALDocument object.
   
   This should really relate to one canonical document in different states. Not multiple
   unrelated output documents that might get delivered together, except the addendum.
   
-  The "addendum" key will typically be handled in a generic object block.
+  The "addendum" attribute will typically be handled in a generic object block.
   Multiple documents can use the same addendum template, with just the case caption
   varying.
   
-  The "filename" attribute will be used to name PDFs.
+  Required attributes:
+    - filename: name used for output PDF
+    - enabled
+    - has_addendum: set to False if the document never has overflow, so docassemble does not 
+                    seek the optional "need_addendum" attribute
   
-  The "enabled" attribute is used to control whether this form is used in this run
-  of the interview.
+  Optional attribute:
+    - addendum: an attachment block
+    - addendum_fields
   
-  The optional "need_addendum" attribute controls whether the addendum is needed for this
-  run of the interview. It will not be triggered if it is not defined (e.g., for a docx file,
-  this is never needed).
   """
   def init(self, *pargs, **kwargs):
     super(ALDocument, self).init(*pargs, **kwargs)
+    self.initializeAttribute('sections',ALAddendumSectionList)
  
   def as_pdf(self, key='final'):
     return pdf_concatenate(self.as_list(key=key), filename=self.filename)
 
   def as_list(self, key='final'):
-    if hasattr(self, 'need_addendum') and self.need_addendum:
-      return [self[key], self['addendum']]
+    if self.has_addendum and self.need_addendum:
+      return [self[key], self.addendum]
     else:
       return [self[key]]
 
 class ALDocumentBundle(DAList):
   """
-  Object representing a bundle of ALDocuments in a specific order. Used when
-  it is helpful to deliver a single, printable collection of multiple templates to an enduser.
-  You may use multiple bundles when each bundle gets used by the end user in different forums
-  or at different times. E.g., one goes to the opposing party, one only to the court (such as
-  impounded address or fee waiver).
+  DAList of ALDocuments or nested ALDocumentBundles.
   
-  A bundle can contain nested bundles in the `templates` list.
+  Use case: providing a list of documents in a specific order.
+  Example:
+    - Cover page
+    - Main motion form
+    - Notice of Interpreter Request
+ 
+  E.g., you may bundle documents one way for the court, one way for the user, one way for the
+  opposing party. ALDocuments can separately be "enabled" or "disabled" for a particular run, which
+  will affect their inclusion in all bundles.
   
-  E.g., main_form, optional_motion1, optional_motion2
+  A bundle can be returned as one PDF or as a list of documents. If the list contains nested
+  bundles, each nested bundle can similarly be returned as a combined PDF or a list of documents.
   
-  required attribute: filename
+  required attributes: 
+    - filename
   optional attribute: enabled
-  required attribute: templates: a list of ALDocuments or ALBundles
   """
   def init(self, *pargs, **kwargs):
     super(ALDocumentBundle, self).init(*pargs, **kwargs)
@@ -90,7 +190,7 @@ class ALDocumentBundle(DAList):
     """
     Returns the nested bundles as a list of PDFs that is only one level deep.
     """
-    return [document.as_pdf(key=key) for document in self.templates]
+    return [document.as_pdf(key=key) for document in self]
   
   def as_html(self, key='final'):
     pass
