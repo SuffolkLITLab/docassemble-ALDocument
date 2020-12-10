@@ -2,12 +2,16 @@ from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollec
 
 class ALAddendumField(DAObject):
   """
+  Object representing a single field and its attributes as related to whether
+  it should be displayed in an addendum. Useful for PDF templates.
+  
   Required attributes:
     - field_name->str represents the name of a docassemble variable
-    - field_style->"list"|"table"|"string" (optional: defaults to "string")
     - overflow_trigger->int
-  Optional:    
+
+  Optional/planned (not implemented yet):    
     - headers->dict(attribute: display label for table)
+    - field_style->"list"|"table"|"string" (optional: defaults to "string")
   """
   def init(self, *pargs, **kwargs):
     super(ALAddendumField, self).init(*pargs, **kwargs)
@@ -17,28 +21,32 @@ class ALAddendumField(DAObject):
     Try to return just the portion of the variable (list-like object or string)
     that exceeds the overflow trigger. Otherwise, return empty string.
     """
-    try:
-      if len(self.value_if_defined()) > self.overflow_trigger:
-        return self.value_if_defined()[self.overflow_trigger:]
-      else:
-        return ""
-    except:
+    if len(self.value_if_defined()) > self.overflow_trigger:
+      return self.value_if_defined()[self.overflow_trigger:]
+    else:
       return ""
-
-  def safe_value(self):
+    
+  def value(self):    
+    """
+    Return the full value, disregarding overflow. Could be useful in addendum
+    if you want to show the whole value without making user flip back/forth between multiple
+    pages.
+    """
+    return self.value_if_defined()
+    
+  def safe_value(self, overflow_message = ""):
     """
     Try to return just the portion of the variable
     that is _shorter than_ the overflow trigger. Otherwise, return empty string.
     """
-    try:
-      if len(self.value_if_defined()) > self.overflow_trigger:
-        return self.value_if_defined()[:self.overflow_trigger]
+    if len(self.value_if_defined()) > self.overflow_trigger:
+      if isinstance(self.value_if_defined(), str):
+        return self.value_if_defined()[:self.overflow_trigger] + overflow_message
       else:
-        return self.value_if_defined()
-    except:
-      return ""
-    
-    
+        return self.value_if_defined()[:self.overflow_trigger]
+    else:
+      return self.value_if_defined()
+      
   def value_if_defined(self):
     """
     Return the value of the field if it is defined, otherwise return an empty string.
@@ -61,6 +69,15 @@ class ALAddendumField(DAObject):
 
 class ALAddendumFieldDict(DAOrderedDict):
   """
+  Object representing a list of fields in your output document, together
+  with the character limit for each field.
+  
+  Provides convenient methods to determine if an addendum is needed and to 
+  control the display of fields so the appropriate text (overflow or safe amount)
+  is displayed in each context.
+  
+  Adding a new entry will implicitly set the `field_name` attribute of the field.
+  
   optional:
     - style: if set to "overflow_only" will only display the overflow text
   """
@@ -73,6 +90,15 @@ class ALAddendumFieldDict(DAOrderedDict):
     if hasattr(self, 'data'):
       self.from_list(data)
       del self.data      
+  
+  def initializeObject(self, *pargs, **kwargs):
+    """
+    When we create a new entry implicitly, make sure we also set the .field_name
+    attribute to the key name so it knows its own field_name.
+    """
+    the_key = pargs[0]
+    super().initializeObject(*pargs, **kwargs)
+    self[the_key].field_name = the_key
   
   def from_list(self, data):
     for entry in data:
@@ -89,6 +115,9 @@ class ALAddendumFieldDict(DAOrderedDict):
       return [field for field in self.elements.values() if defined(field.field_name) and len(field.overflow_value())]
     else:
       return [field for field in self.elements.values() if defined(field.field_name)]
+  
+  def overflow(self):
+    return self.defined_fields(style='overflow_only')
     
   #def defined_sections(self):
   #  if self.style == 'overflow_only':    
@@ -113,26 +142,42 @@ class ALDocument(DADict):
   Required attributes:
     - filename: name used for output PDF
     - enabled
-    - has_addendum: set to False if the document never has overflow, so docassemble does not 
-                    seek the optional "need_addendum" attribute
+    - has_addendum: set to False if the document never has overflow, like for a DOCX template
   
   Optional attribute:
     - addendum: an attachment block
-    - addendum_fields
+    - overflow_fields
   
   """
   def init(self, *pargs, **kwargs):
     super(ALDocument, self).init(*pargs, **kwargs)
     self.initializeAttribute('overflow_fields',ALAddendumFieldDict)
+    if not hasattr(self, 'default_overflow_message'):
+      self.default_overflow_message = ''
  
   def as_pdf(self, key='final'):
     return pdf_concatenate(self.as_list(key=key), filename=self.filename)
 
   def as_list(self, key='final'):
-    if self.has_addendum and self.need_addendum:
+    if self.has_addendum and self.has_overflow():
       return [self[key], self.addendum]
     else:
       return [self[key]]
+    
+  def has_overflow(self):
+    return len(self.overflow()) > 0
+  
+  def overflow(self):
+    return self.overflow_fields.overflow()
+    
+  def safe_value(self, field_name, overflow_message=None):
+    """
+    Shortcut syntax for accessing the "safe" (shorter than overflow trigger)
+    value of a field that we have specified as needing an addendum.
+    """
+    if overflow_message is None:
+      overflow_message = self.default_overflow_message
+    return self.overflow_fields[field_name].safe_value(overflow_message=overflow_message)
 
 class ALDocumentBundle(DAList):
   """

@@ -4,8 +4,9 @@ modules:
 ---
 objects:
   - template1: ALDocument.using(filename="template1", has_addendum=False)
-  - template2: ALDocument.using(filename="template2", has_addendum=True)
+  - template2: ALDocument.using(filename="template2", has_addendum=True, default_overflow_message = " (see addendum)")
   - hello_world: ALDocument.using(filename="hello", has_addendum=False)
+  - field4: DAList.using(there_are_any=True)
 ---
 objects:
   - court_bundle: ALDocumentBundle.using(elements=[template1,template2,hello_world], filename="court_bundle.pdf")
@@ -13,8 +14,9 @@ objects:
 mandatory: True
 code: |
   template1.enabled
-  field1
-  template2.overflow_fields.gathered
+  if template2.enabled:
+    field1
+    field4.gather()
   preview
   download
 ---
@@ -31,15 +33,20 @@ fields:
   - field3: field3
     datatype: area
 ---
+question: |
+  What are your favorite fruits?
+subquestion: |
+  Up to 2 will fit on the main form. The rest will go on an addendum.
+list collect: True
+fields:
+  - Fruit name: field4[i]
+---
 code: |
-  template2.overflow_fields.from_list([
-    {'field_name':'field1', 
-     'overflow_trigger': 20},
-    {'field_name': 'field2',
-     'overflow_trigger': 20},
-    {'field_name': 'field3',
-     'overflow_trigger': 20}
-     ])
+  template2.overflow_fields['field1'].overflow_trigger = 10
+  template2.overflow_fields['field2'].overflow_trigger = 20
+  template2.overflow_fields['field3'].overflow_trigger = 5
+  template2.overflow_fields['field4'].overflow_trigger = 2
+  
   template2.overflow_fields.gathered=True
 ---
 continue button field: debug_overflow
@@ -69,7 +76,7 @@ signature: user_signature
 ---
 continue button field: preview
 question: |
-  Test
+  Look at the document below before you sign it
 subquestion: |
   ${ court_bundle.preview() }
 ---
@@ -95,19 +102,30 @@ attachment:
 attachment:
   - variable name: template2[i]
     content: |
-      Example 2
+      # Example of handling overflow
       
-      Field1: ${ template2.overflow_fields['field1'].safe_value() }
+      This document simulates a PDF with fixed field width.
+      Any overflow that exceeds character limit for the fields
+      below will go to an addendum.
      
-      Field2: ${ template2.overflow_fields['field2'].safe_value() }
+      Field1: ${ template2.safe_value('field1') }
+     
+      Field2: ${ template2.safe_value('field2') }
       
-      Field3: ${ template2.overflow_fields['field3'].safe_value() }
+      Field3: ${ template2.safe_value('field3') }
+      
+      Field 4:
+      
+      % for fruit in template2.safe_value('field4'):
+      * ${ fruit }
+      % endfor
       
       % if i=='final':
       ${ user_signature }
+      % else:
+      [ Your signature here ]
       % endif
       
-      This text is simulating triggering an overflow
 ---
 attachment:
   - name: A *hello world* document
@@ -124,9 +142,15 @@ attachment:
     content: |
       # Addendum for ${ x.filename }
       
-      % for field in x.overflow_fields.defined_fields():
+      % for field in x.overflow():
       ${ field.field_name }: 
       
+      % if isinstance(field.overflow_value(), list):
+      % for item in field.overflow_value():
+      * ${ item }
+      % endfor
+      % else:
       > ${ field.overflow_value() }
+      % endif
       
       % endfor
