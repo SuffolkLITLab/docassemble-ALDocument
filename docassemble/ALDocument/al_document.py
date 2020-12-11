@@ -58,15 +58,21 @@ class ALAddendumField(DAObject):
     Try to return just the portion of the variable
     that is _shorter than_ the overflow trigger. Otherwise, return empty string.
     """
+    
+    # Handle simplest case first
+    value = self.value_if_defined()
+    if isinstance(value, str) and len(value) <= self.overflow_trigger and (value.count('\r') + value.count('\n')) == 0:
+      return value
+    
     max_lines = self.max_lines(input_width=input_width,overflow_message_length=len(overflow_message))
     max_chars = max(self.overflow_trigger - len(overflow_message),0)
-    
+        
     # If there are at least 2 lines, we can ignore overflow trigger.
     # each line will be at least input_width wide
     if preserve_newlines and max_lines > 1:
-      if isinstance(self.value_if_defined(), str):
+      if isinstance(value, str):
         # Replace all new line characters with just \n. \r\n inserts two lines in a PDF
-        value = re.sub(r"[\r\n]+|\r+|\n+",r"\n",self.value_if_defined()).rstrip()
+        value = re.sub(r"[\r\n]+|\r+|\n+",r"\n",value).rstrip()
         line = 1
         retval = ""
         paras = value.split('\n')
@@ -94,18 +100,23 @@ class ALAddendumField(DAObject):
           return retval
       
     # Strip newlines from strings
-    if isinstance(self.value_if_defined(), str):
-      if len(self.value_if_defined()) > max_chars:
-        return re.sub(r"[\r\n]+|\r+|\n+"," ",self.value_if_defined()).rstrip()[:max_chars] + overflow_message
+    if isinstance(value, str):
+      if len(value) > self.overflow_trigger:
+        return re.sub(r"[\r\n]+|\r+|\n+"," ",value).rstrip()[:max_chars] + overflow_message
       else:
-        return re.sub(r"[\r\n]+|\r+|\n+"," ",self.value_if_defined()).rstrip()[:max_chars]
+        return re.sub(r"[\r\n]+|\r+|\n+"," ",value).rstrip()[:max_chars]
     
-    # If the overflow item is a list
-    return self.value_if_defined()[:self.overflow_trigger]
+    # If the overflow item is a list or DAList
+    if isinstance(value, list) or isinstance(value, DAList):
+      return value[:self.overflow_trigger]
+    else:
+      # We can't slice objects that are not lists or strings
+      return value
       
   def value_if_defined(self):
     """
     Return the value of the field if it is defined, otherwise return an empty string.
+    Addendum should never trigger docassemble's variable gathering.
     """
     if defined(self.field_name):
       return value(self.field_name)

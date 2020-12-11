@@ -3,35 +3,33 @@ modules:
   - .al_document
 ---
 objects:
-  - template1: ALDocument.using(title="Template 1", filename="template1", has_addendum=False)
+  - cover_page: ALDocument.using(title="Cover page", filename="cover_page", has_addendum=False)
   - template2: ALDocument.using(title="Template 2", filename="template2", has_addendum=True, default_overflow_message = " (see addendum)")
-  - hello_world: ALDocument.using(title="Hello, World", filename="hello", has_addendum=False)
+  - minor_release: ALDocument.using(title="Release form", filename="release", has_addendum=False)
   - field4: DAList.using(there_are_any=True)
 ---
+# The document bundle needs to be in a different objects block
+# because it relies on the template variables being initialized
 objects:
-  - court_bundle: ALDocumentBundle.using(elements=[template1,template2,hello_world], filename="court_bundle.pdf", title="Forms to download and deliver to court")
+  - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="Forms to download and deliver to court")
 ---
 mandatory: True
 code: |
-  template1.enabled
+  cover_page.enabled
   if template2.enabled:
     field1
-    # field4.gather()
+    debug_overflow
+    field4.gather()
   preview
   download
 ---
-code: |
-  template2.need_addendum = True
----
 question: |
-  Enter some data
+  Experiment with overflow
 fields:
-  - field1: field1
+  - Overflows at 3 lines: field1
     datatype: area
-  - field2: field2
-    datatype: area
-  - field3: field3
-    datatype: area
+  - Overflows at 20 characters: field2
+  - Overflows at 5 characters: field3
 ---
 question: |
   What are your favorite fruits?
@@ -51,12 +49,19 @@ code: |
 ---
 continue button field: debug_overflow
 question: |
-  ${ template2.overflow_fields }
+  Safe values
+subquestion: |
+  Field1: ${ single_to_double_newlines(template2.safe_value('field1', preserve_newlines=True)) }
+     
+  Field2: ${ template2.safe_value('field2') }
+      
+  Field3: ${ template2.safe_value('field3') }
+      
 ---
 question: |
   Which documents do you want?
 fields:
-  - Template 1: template1.enabled
+  - Include a cover page: cover_page.enabled
     datatype: yesno
   - Template 2: template2.enabled
     datatype: yesno
@@ -68,8 +73,14 @@ fields:
     datatype: integer
 ---
 code: |
-  hello_world.enabled = False # age > 10
+  # You can use code to trigger a document being enabled, too
+  minor_release.enabled = age < 18
 ---
+comment: |
+  This could be a common use case for draft/final versions of a document.
+  Signature only appears in final document.
+  
+  You could also watermark the draft version.
 question: |
   Sign below
 signature: user_signature  
@@ -90,10 +101,13 @@ subquestion: |
   Or, download as one file:  
   ${ court_bundle.download_button_html() }
   
+# You wouldn't be likely to use attachment code, but you could
+# as long as the documents in the bundle were all created by an
+# attachment block. It won't work if you mix in uploaded files
 attachment code: court_bundle.as_flat_list()
 ---
 attachment:
-  - variable name: template1[i]
+  - variable name: cover_page[i]
     name: xyz
     filename: xyz
     content: |
@@ -118,26 +132,40 @@ attachment:
       
       Field 4:
       
-       for fruit in template2.safe_value('field4'):
-      * { fruit }
-       endfor
+      % for fruit in template2.safe_value('field4'):
+      * ${ fruit }
+      % endfor
       
       % if i=='final':
       ${ user_signature }
       % else:
       [ Your signature here ]
       % endif
-      
 ---
+# The ALDocument class doesn't make use of any of the attributes
+# of the attachment block other than the variable name/content.
+# Those need to be supplied to the parent ALDocument.
+# It does get used on the attachment download/email block if you use
+# attachment code on a download screen.
 attachment:
-  - name: A *hello world* document
-    filename: Hello_World_Document
-    variable name: hello_world[i]
+  - name: Minor release
+    filename: minor_release
+    variable name: minor_release[i]
     content: |
-      Hello, world!
+      # Information for minors
       
-      I only appear if you are older than 10
+      If you are under 18, we generate this document for your
+      parent/guardian to sign.
+      
+      % if i=='final':
+      ${ user_signature }
+      % else:
+      [ Guardian signature here ]
+      % endif      
 ---
+# If it fits your project style, an addendum can be shared for 
+# all of the documents in your interview.
+# Of course you can also handle each field bespoke.
 generic object: ALDocument
 attachment:
   - variable name: x.addendum
@@ -147,7 +175,7 @@ attachment:
       You can store any arbitrary data you want to pass to the addendum as
       a property of the ALDocument. For example: information that could
       customize a case caption or a running header/footer.
-      
+            
       % for field in x.overflow():
       ${ field.field_name }: 
       

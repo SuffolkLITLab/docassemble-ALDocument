@@ -6,7 +6,7 @@ ALDocument is a single object that represents a document with a "preview"
 version (perhaps without a signature) and a "final" version, as well as an
 addendum, which is often needed for PDF forms.
 
-The ALAddendumFields object stores a list of field names, together with a
+The ALAddendumFieldDict object is an ordered dict that stores a collection of field names, together with a
 character/item limit. The ALDocument uses this list to automatically include
 an addendum when it is needed. One addendum template can easily be shared
 across multiple documents that your interview assembles.
