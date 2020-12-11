@@ -1,9 +1,13 @@
 from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html
+import re
 
 class ALAddendumField(DAObject):
   """
   Object representing a single field and its attributes as related to whether
   it should be displayed in an addendum. Useful for PDF templates.
+  
+  The items can be strings or lists/list-like objects. It does not know
+  how to handle overflow for a dictionary, e.g.
   
   Required attributes:
     - field_name->str represents the name of a docassemble variable
@@ -16,16 +20,31 @@ class ALAddendumField(DAObject):
   def init(self, *pargs, **kwargs):
     super(ALAddendumField, self).init(*pargs, **kwargs)
 
-  def overflow_value(self):
+  def overflow_value(self, preserve_newlines=False, input_width=80, overflow_message = ""):
     """
     Try to return just the portion of the variable (list-like object or string)
     that exceeds the overflow trigger. Otherwise, return empty string.
-    """
-    if len(self.value_if_defined()) > self.overflow_trigger:
-      return self.value_if_defined()[self.overflow_trigger:]
-    else:
-      return ""
     
+    If newlines are preserved, we will use a heuristic to estimate line breaks instead
+    of using absolute character limit.
+    """
+    last_char = max(len(self.safe_value(overflow_message = overflow_message, input_width=input_width, preserve_newlines=True)) - len(overflow_message), 0)   
+    
+    if preserve_newlines and isinstance(self.value_if_defined(),str):
+      # start where the safe value ends
+      return self.value_if_defined()[last_char:]
+      
+    if isinstance(self.value_if_defined(),str):
+      return self.value_if_defined()[last_char:]
+    
+    return self.value_if_defined()[self.overflow_trigger:]
+
+  def max_lines(self, input_width=80, overflow_message_length=0):
+    """
+    Estimate the number of rows in the field in the output document.
+    """
+    return int(max(self.overflow_trigger-overflow_message_length,0) / input_width) + 1
+        
   def value(self):    
     """
     Return the full value, disregarding overflow. Could be useful in addendum
@@ -34,18 +53,45 @@ class ALAddendumField(DAObject):
     """
     return self.value_if_defined()
     
-  def safe_value(self, overflow_message = ""):
+  def safe_value(self, overflow_message = "", input_width=80, preserve_newlines=False):
     """
     Try to return just the portion of the variable
     that is _shorter than_ the overflow trigger. Otherwise, return empty string.
     """
-    if len(self.value_if_defined()) > self.overflow_trigger:
+    max_lines = self.max_lines(input_width=input_width,overflow_message_length=len(overflow_message))
+    max_chars = max(self.overflow_trigger - len(overflow_message),0)
+    
+    # If there are at least 2 lines, we can ignore overflow trigger.
+    # each line will be at least input_width wide
+    if preserve_newlines and max_lines > 1:
       if isinstance(self.value_if_defined(), str):
-        return self.value_if_defined()[:self.overflow_trigger] + overflow_message
-      else:
-        return self.value_if_defined()[:self.overflow_trigger]
-    else:
-      return self.value_if_defined()
+        # Replace all new line characters with just \n. \r\n inserts two lines in a PDF
+        value = re.sub(r"[\r\n]+|\r+|\n+",r"\n",self.value_if_defined()).rstrip()
+        line = 0
+        retval = ""
+        paras = value.split('\n')
+        para = 0
+        while line <= max_lines and para < len(paras):
+          # add the whole paragraph if less than width of input
+          if len(paras[para]) <= input_width:
+            retval += paras[para]
+            line += 1
+            para += 1
+          else:
+            # Keep taking the first input_width characters until we hit max_lines
+            # or we finish the paragraph
+            while line <= max_lines and len(paras[para]):
+              retval += paras[para][:input_width]
+              paras[para] = paras[para][input_width:]
+              line += 1
+        return retval + overflow_message
+      
+    # Strip newlines from strings    
+    if isinstance(self.value_if_defined(), str):
+      return self.value_if_defined().replace('\r','').replace('\n','')[:max_chars] + overflow_message
+    
+    # If the overflow item is a list
+    return self.value_if_defined()[:self.overflow_trigger]
       
   def value_if_defined(self):
     """

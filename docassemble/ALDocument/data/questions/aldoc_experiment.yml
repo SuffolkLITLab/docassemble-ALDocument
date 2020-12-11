@@ -152,7 +152,7 @@ attachment:
       * ${ item }
       % endfor
       % else:
-      > ${ field.overflow_value() }
+      > ${ field.overflow_value(overflow_message=x.default_overflow_message) }
       % endif
       
       % endfor
