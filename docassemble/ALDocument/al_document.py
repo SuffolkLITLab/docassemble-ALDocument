@@ -28,7 +28,7 @@ class ALAddendumField(DAObject):
     If newlines are preserved, we will use a heuristic to estimate line breaks instead
     of using absolute character limit.
     """
-    last_char = max(len(self.safe_value(overflow_message = overflow_message, input_width=input_width, preserve_newlines=True)) - len(overflow_message), 0)   
+    last_char = max(len(self.safe_value(overflow_message = overflow_message, input_width=input_width, preserve_newlines=True)) - (max(len(overflow_message)-1,0)), 0)   
     
     if preserve_newlines and isinstance(self.value_if_defined(),str):
       # start where the safe value ends
@@ -67,14 +67,14 @@ class ALAddendumField(DAObject):
       if isinstance(self.value_if_defined(), str):
         # Replace all new line characters with just \n. \r\n inserts two lines in a PDF
         value = re.sub(r"[\r\n]+|\r+|\n+",r"\n",self.value_if_defined()).rstrip()
-        line = 0
+        line = 1
         retval = ""
         paras = value.split('\n')
         para = 0
         while line <= max_lines and para < len(paras):
           # add the whole paragraph if less than width of input
           if len(paras[para]) <= input_width:
-            retval += paras[para]
+            retval += paras[para] + "\n"
             line += 1
             para += 1
           else:
@@ -84,11 +84,21 @@ class ALAddendumField(DAObject):
               retval += paras[para][:input_width]
               paras[para] = paras[para][input_width:]
               line += 1
-        return retval + overflow_message
+            if not len(paras[para]):
+              para += 1
+              retval += "\n"
+        # TODO: check logic here to only add overflow message when we exceed length
+        if len(paras) > para:
+          return retval.rstrip() + overflow_message # remove trailing newline before adding overflow message
+        else:
+          return retval
       
-    # Strip newlines from strings    
+    # Strip newlines from strings
     if isinstance(self.value_if_defined(), str):
-      return self.value_if_defined().replace('\r','').replace('\n','')[:max_chars] + overflow_message
+      if len(self.value_if_defined()) > max_chars:
+        return re.sub(r"[\r\n]+|\r+|\n+"," ",self.value_if_defined()).rstrip()[:max_chars] + overflow_message
+      else:
+        return re.sub(r"[\r\n]+|\r+|\n+"," ",self.value_if_defined()).rstrip()[:max_chars]
     
     # If the overflow item is a list
     return self.value_if_defined()[:self.overflow_trigger]
@@ -223,14 +233,14 @@ class ALDocument(DADict):
   def overflow(self):
     return self.overflow_fields.overflow()
     
-  def safe_value(self, field_name, overflow_message=None):
+  def safe_value(self, field_name, overflow_message=None, preserve_newlines=False):
     """
     Shortcut syntax for accessing the "safe" (shorter than overflow trigger)
     value of a field that we have specified as needing an addendum.
     """
     if overflow_message is None:
       overflow_message = self.default_overflow_message
-    return self.overflow_fields[field_name].safe_value(overflow_message=overflow_message)
+    return self.overflow_fields[field_name].safe_value(overflow_message=overflow_message, preserve_newlines=preserve_newlines)
 
 class ALDocumentBundle(DAList):
   """

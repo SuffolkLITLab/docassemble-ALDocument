@@ -16,7 +16,7 @@ code: |
   template1.enabled
   if template2.enabled:
     field1
-    field4.gather()
+    # field4.gather()
   preview
   download
 ---
@@ -42,7 +42,7 @@ fields:
   - Fruit name: field4[i]
 ---
 code: |
-  template2.overflow_fields['field1'].overflow_trigger = 10
+  template2.overflow_fields['field1'].overflow_trigger = 150
   template2.overflow_fields['field2'].overflow_trigger = 20
   template2.overflow_fields['field3'].overflow_trigger = 5
   template2.overflow_fields['field4'].overflow_trigger = 2
@@ -68,7 +68,7 @@ fields:
     datatype: integer
 ---
 code: |
-  hello_world.enabled = age > 10
+  hello_world.enabled = False # age > 10
 ---
 question: |
   Sign below
@@ -110,7 +110,7 @@ attachment:
       Any overflow that exceeds character limit for the fields
       below will go to an addendum.
      
-      Field1: ${ template2.safe_value('field1') }
+      Field1: ${ single_to_double_newlines(template2.safe_value('field1', preserve_newlines=True)) }
      
       Field2: ${ template2.safe_value('field2') }
       
@@ -118,9 +118,9 @@ attachment:
       
       Field 4:
       
-      % for fruit in template2.safe_value('field4'):
-      * ${ fruit }
-      % endfor
+       for fruit in template2.safe_value('field4'):
+      * { fruit }
+       endfor
       
       % if i=='final':
       ${ user_signature }
@@ -143,6 +143,10 @@ attachment:
   - variable name: x.addendum
     content: |
       # Addendum for ${ x.filename }
+      
+      You can store any arbitrary data you want to pass to the addendum as
+      a property of the ALDocument. For example: information that could
+      customize a case caption or a running header/footer.
       
       % for field in x.overflow():
       ${ field.field_name }: 
