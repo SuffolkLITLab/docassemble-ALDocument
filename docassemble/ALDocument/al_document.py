@@ -175,8 +175,13 @@ class ALAddendumField(DAObject):
         rows += "|".join(row_values)
       else:
         row_values = []
-        for column in flattened_columns:        
-          row_values.append(str(row.getattr(column,'')))
+        for column in flattened_columns:
+          # don't trigger collecting attributes that are required to resolve 
+          # to a string
+          try:
+            row_values.append(str(getattr(row, column,'')))
+          except:
+            row_values.append("")
         rows += "|".join(row_values)
       rows += "\n"
 
