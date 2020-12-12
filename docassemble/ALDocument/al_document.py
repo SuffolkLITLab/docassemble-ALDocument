@@ -152,9 +152,12 @@ class ALAddendumField(DAObject):
     Useful if addendum is markdown--not for use in a Docx file.
     """
     if not self.columns():
-      retval = "* "
-      retval += "\n* ".join(self.overflow_value())
-      return retval + "\n"
+      if self.overflow_value():  
+        retval = "* "
+        retval += "\n* ".join(self.overflow_value())
+        return retval + "\n"
+      else:
+        return ""
     
     num_columns = len(self.columns())
     
