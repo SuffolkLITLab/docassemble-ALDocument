@@ -129,11 +129,59 @@ class ALAddendumField(DAObject):
     """
     Return a list of the columns in this object.
     """
-    if hasattr(self, headers):
+    if hasattr(self, 'headers'):
       return self.headers
     else:
-      return [] # TODO
+      # Use the first row as an exemplar
+      try:
+        first_value = self.value_if_defined()[0]
 
+        if isinstance(first_value, dict) or isinstance(first_value, DADict):
+          return list([{key:key} for key in first_value.keys()])
+        elif isinstance(first_value, DAObject):
+          attr_to_ignore = {'has_nonrandom_instance_name','instanceName','attrList'}
+          return [{key:key} for key in list( set(first_value.__dict__.keys()) - attr_to_ignore )]
+      except:
+        return None
+      # None means the value has no meaningful columns we can extract
+  
+  def overflow_markdown(self):
+    """
+    Return a markdown table or bulleted list representing the values in the list.
+    
+    Useful if addendum is markdown--not for use in a Docx file.
+    """
+    if not self.columns():
+      retval = "* "
+      retval += "\n* ".join(self.overflow_value())
+      return retval + "\n"
+    
+    num_columns = len(self.columns())
+    
+    header = " | ".join([list(item.items())[0][1] for item in self.columns()])
+    header += "\n"
+    header += "|".join(["-----"] * num_columns)    
+    
+    flattened_columns = []
+    for column in self.columns():
+      flattened_columns.append(list(column.items())[0][0])
+    
+    rows = "\n"
+    for row in self.overflow_value():
+      if isinstance(row, dict) or isinstance(row, DADict):        
+        row_values = []
+        for column in flattened_columns:        
+          row_values.append(str(row.get(column,'')))
+        rows += "|".join(row_values)
+      else:
+        row_values = []
+        for column in flattened_columns:        
+          row_values.append(str(row.getattr(column,'')))
+        rows += "|".join(row_values)
+      rows += "\n"
+
+    return header + rows      
+      
 class ALAddendumFieldDict(DAOrderedDict):
   """
   Object representing a list of fields in your output document, together

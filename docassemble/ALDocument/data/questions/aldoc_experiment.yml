@@ -7,6 +7,9 @@ objects:
   - template2: ALDocument.using(title="Template 2", filename="template2", has_addendum=True, default_overflow_message = " (see addendum)")
   - minor_release: ALDocument.using(title="Release form", filename="release", has_addendum=False)
   - field4: DAList.using(there_are_any=True)
+
+---
+
 ---
 # The document bundle needs to be in a different objects block
 # because it relies on the template variables being initialized
