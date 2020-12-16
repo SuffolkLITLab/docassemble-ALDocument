@@ -1,6 +1,29 @@
-from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html
+from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html, include_docx_template
 import re
 
+def label(dictionary):
+  try:
+    return list(dictionary.items())[0][1]
+  except:
+    return ''
+  
+def key(dictionary):
+  try:
+    return list(dictionary.items())[0][1]
+  except:
+    return ''
+
+def safeattr(object, key):
+  try:
+    if isinstance(object, dict) or isinstance(object, DADict):
+      return str(object.get(key,''))
+    elif isinstance(object, DAObject):      
+      return str(getattr(object, key))
+    else:
+      return ''
+  except:
+    return ""
+  
 class ALAddendumField(DAObject):
   """
   Object representing a single field and its attributes as related to whether
@@ -144,12 +167,38 @@ class ALAddendumField(DAObject):
       except:
         return None
       # None means the value has no meaningful columns we can extract
+
+
+  def type(self):
+    """
+    list | object_list | other
+    """
+    value = self.value_if_defined()
+    if isinstance(value, list) or isinstance(value, DAList):
+      if len(value) and (isinstance(value[0], dict) or isinstance(value[0], DADict) or isinstance(value[0], DAObject)):
+        return "object_list"
+      return "list"
+    return "other"                         
+
+  def is_list(self):
+    """
+    Identify whether the field is a list, whether of objects/dictionaries or just plain variables.
+    """
+    return self.type() == 'object_list' or self.type() == 'list'
+      
+  def is_object_list(self):
+    """
+    Identify whether the field represents a list of either dictionaries or objects.
+    """
+    return self.type() == 'object_list'
   
   def overflow_markdown(self):
     """
-    Return a markdown table or bulleted list representing the values in the list.
+    Return a formatted markdown table or bulleted list representing the values in the list.
     
-    Useful if addendum is markdown--not for use in a Docx file.
+    This method does not give you any control over the output other than labels of columns,
+    but you also do not need to use this output if you want to independently control the format
+    of the table.
     """
     if not self.columns():
       if self.overflow_value():  
@@ -189,6 +238,16 @@ class ALAddendumField(DAObject):
       rows += "\n"
 
     return header + rows      
+  
+  def overflow_docx(self, path="docassemble.ALDocumentDict:data/templates/addendum_table.docx"):
+    """
+    Light wrapper around insert_docx_template() that inserts a formatted table into a docx
+    file. If the object in the list is a plain string/int, it returns a bulleted list.
+    
+    Using this method will not give you any control at all over the formatting, but you can directly
+    call field.overflow_value() instead of using this method.
+    """
+    return include_docx_template(path, columns=self.columns(), rows=self.overflow_value())
       
 class ALAddendumFieldDict(DAOrderedDict):
   """
@@ -235,9 +294,9 @@ class ALAddendumFieldDict(DAOrderedDict):
     If the "style" is set to overflow_only, only return the overflow values.
     """
     if style == 'overflow_only':
-      return [field for field in self.elements.values() if defined(field.field_name) and len(field.overflow_value())]
+      return [field for field in self.values() if defined(field.field_name) and len(field.overflow_value())]
     else:
-      return [field for field in self.elements.values() if defined(field.field_name)]
+      return [field for field in self.values() if defined(field.field_name)]
   
   def overflow(self):
     return self.defined_fields(style='overflow_only')

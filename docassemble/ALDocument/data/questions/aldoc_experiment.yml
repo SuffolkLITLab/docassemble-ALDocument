@@ -1,30 +1,46 @@
 ---
+id: interview order
+mandatory: True
+code: |
+  cover_page.enabled
+  if template2.enabled:
+    field1
+    field4.gather()
+    people.gather()
+    # debug_overflow    
+  if minor_release.enabled:
+    people.gather()
+    # debug_minor_addendum
+  preview
+  download
+---
 modules:
   - .al_document
 ---
 objects:
   - cover_page: ALDocument.using(title="Cover page", filename="cover_page", has_addendum=False)
   - template2: ALDocument.using(title="Template 2", filename="template2", has_addendum=True, default_overflow_message = " (see addendum)")
-  - minor_release: ALDocument.using(title="Release form", filename="release", has_addendum=False)
+  - minor_release: ALDocument.using(title="Release form", filename="release", has_addendum=True)
   - field4: DAList.using(there_are_any=True)
-
+  - people: DAList.using(object_type=Individual,there_are_any=True)
 ---
-
+question: |
+  People
+subquestion: |
+  One person's information will fit on the main form. The rest will
+  go to an addendum.
+list collect: True
+fields:
+  - Name: people[i].name.first
+  - Birthdate: people[i].birthdate
+  - Address: people[i].address_long
+    address autocomplete: True    
+  - Height: people[i].height
 ---
 # The document bundle needs to be in a different objects block
 # because it relies on the template variables being initialized
 objects:
   - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="Forms to download and deliver to court")
----
-mandatory: True
-code: |
-  cover_page.enabled
-  if template2.enabled:
-    field1
-    debug_overflow
-    field4.gather()
-  preview
-  download
 ---
 question: |
   Experiment with overflow
@@ -47,8 +63,13 @@ code: |
   template2.overflow_fields['field2'].overflow_trigger = 20
   template2.overflow_fields['field3'].overflow_trigger = 5
   template2.overflow_fields['field4'].overflow_trigger = 2
+  template2.overflow_fields['people'].overflow_trigger=1
   
   template2.overflow_fields.gathered=True
+---
+code: |
+  minor_release.overflow_fields['people'].overflow_trigger=1
+  minor_release.overflow_fields.gathered=True
 ---
 continue button field: debug_overflow
 question: |
@@ -59,10 +80,23 @@ subquestion: |
   Field2: ${ template2.safe_value('field2') }
       
   Field3: ${ template2.safe_value('field3') }
-      
+  
+  People: ${ comma_and_list(template2.safe_value('people')) }
+  
+  ${ template2.overflow_fields['people'].columns() }
+  
+  ${ template2.overflow_fields['people'].overflow_markdown() }
+---
+continue button field: debug_minor_addendum
+question: |
+  debug
+subquestion: |
+  ${ minor_release.overflow_fields.defined_fields() }
 ---
 question: |
   Which documents do you want?
+comment: |
+  [send an email](${ url_action('send_the_email', al_attachment=pdf_concatenate(cover_page['final']) )})
 fields:
   - Include a cover page: cover_page.enabled
     datatype: yesno
@@ -139,6 +173,8 @@ attachment:
       * ${ fruit }
       % endfor
       
+      People: ${ comma_and_list(template2.safe_value('people')) }
+      
       % if i=='final':
       ${ user_signature }
       % else:
@@ -166,6 +202,13 @@ attachment:
       [ Guardian signature here ]
       % endif      
 ---
+# This block shows how to create a custom addendum
+# This one will use a Docx instead to demonstrate how tables work in a 
+# docx addendum
+attachment:
+  - variable name: minor_release.addendum
+    docx template file: docx_addendum.docx
+---
 # If it fits your project style, an addendum can be shared for 
 # all of the documents in your interview.
 # Of course you can also handle each field bespoke.
@@ -178,16 +221,30 @@ attachment:
       You can store any arbitrary data you want to pass to the addendum as
       a property of the ALDocument. For example: information that could
       customize a case caption or a running header/footer.
+      
+      When the item that overflows is a list of objects, our module
+      can grab all of the attributes and display them in a table. You can
+      customize the labels and the order for each column by setting the
+      "headers" attribute of the field to a list of dictionaries.
             
       % for field in x.overflow():
       ${ field.field_name }: 
       
-      % if isinstance(field.overflow_value(), list):
-      % for item in field.overflow_value():
-      * ${ item }
-      % endfor
+      % if field.is_object_list():
+      ${ field.overflow_markdown() }
       % else:
       > ${ field.overflow_value(overflow_message=x.default_overflow_message) }
       % endif
-      
       % endfor
+---
+question: |
+  Share your documents
+fields:
+  - Email address: al_to_email
+    datatype: email
+continue button label: Send email
+---
+event: send_the_email
+code: |
+  the_attachment = action_argument('al_attachment')
+  send_email(to=al_to_email, attachments=the_attachment, subject="Here are your documents")
