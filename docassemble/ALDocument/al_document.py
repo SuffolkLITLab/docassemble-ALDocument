@@ -457,7 +457,7 @@ class ALDocumentBundle(DAList):
     - Considered making the action always a generic object action, but
         that may be too opaque for a developer to intuit.
     """
-    name = re.sub(r'[^A-Za-z0-9]+','_', self.instanceName)
+    name = re.sub(r'[^A-Za-z0-9]+','_', self.instanceName)  # safe name for classes and ids
     return '''
   <div class="al_send_bundle '''+name+'''" id="al_send_bundle_'''+name+'''" name="al_send_bundle_'''+name+'''">
   <div class="form-check">
