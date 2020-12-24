@@ -442,11 +442,13 @@ class ALDocumentBundle(DAList):
       editable.append(doc.docx if hasattr(doc, 'docx') else doc.pdf)
     return editable
   
-  def send_bundle_action_html(self, action_name):
+  def send_bundle_action_html(self, event_name):
     """
     Return html for sending this bundle, currently via email.
     Is there a way to use the instanceName to customize the html id to this particular bundle?
     Name leaves room for expanding to sms, etc., in future.
+    Considered making the action a generic object action, but
+    that may be too opaque for a developer to intuit
     """
     name = self.instanceName
     return '''
@@ -464,13 +466,29 @@ class ALDocumentBundle(DAList):
       <input value="''' + (user_info().email if user_logged_in() else '') + '''" alt="Input box" class="form-control" type="email" name="al_doc_email_'''+name+'''" id="al_doc_email_'''+name+'''">
     </span>
   </span>'''+action_button_html('javascript:send_docs()', label="Send", icon="envelope", color="primary", size="md", classname="al_send_email_button", id_tag=("al_send_email_button_"+name))+'''
+  
   <script>
     function send_docs() {
       var wants_edit = $("#al_wants_editable_'''+name+'''")[0].checked;
       var email = $("#al_doc_email_'''+name+'''")[0].value;
-      action_perform("'''+action_name+'''", {wants_edit, email});
+      action_perform("'''+event_name+'''", {wants_edit, email});
     };
   </script>
+  
+  <style>
+    .al_email_address, .al_email_address label, .al_email_address input {
+      display: inline-block;
+      width: unset;
+      margin: unset;
+    }
+    .al_send_button {
+      display: inline-block;
+    }
+    .al_send_editable {
+      display: block;
+      width: 100%;
+    }
+  </style>
   </div>
     '''
   

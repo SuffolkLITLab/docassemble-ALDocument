@@ -142,47 +142,8 @@ subquestion: |
   attachment block. It won't work if you mix in uploaded files
   
   ${ court_bundle.send_bundle_action_html( 'send_court_bundle' ) }
-  
-#  <div class='al_send_bundle'>
-#  <div class="form-check">
-#    <input class="form-check-input" type="checkbox" id="wants_editable">
-#    <label class="form-check-label" for="wants_editable">
-#      I want the editable copy of the documents
-#    </label>
-#  </div>
-#  
-#  <span class="al_email_address form-group row da-field-container da-field-container-datatype-email">
-#    <label for="doc_email" class="col-form-label da-form-label datext-right">E-mail</label>
-#    <span class="dafieldpart">
-#      <input value="${ user_info().email if user_logged_in() else '' }" alt="Input box" class="form-control" type="email" name="doc_email" id="doc_email">
-#    </span>
-#  </span> ${ action_button_html('javascript:send_docs()', label="Send", icon="envelope", color="primary", size="md", classname="al_send_button") }
-#  <script>
-#    function send_docs() {
-#      var wants_edit = $('#wants_editable')[0].checked;
-#      var email = $('#doc_email')[0].value;
-#      action_perform("send_court_bundle", {wants_edit, email});
-#    };
-#  </script>
-#  </div>
-  
 
 attachment code: court_bundle.as_flat_list()
-css: |
-  <style>
-    .al_email_address, .al_email_address label, .al_email_address input {
-      display: inline-block;
-      width: unset;
-      margin: unset;
-    }
-    .al_send_button {
-      display: inline-block;
-    }
-    .al_send_editable {
-      display: block;
-      width: 100%;
-    }
-  </style>
 ---
 event: send_court_bundle
 code: |
