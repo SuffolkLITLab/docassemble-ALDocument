@@ -132,16 +132,69 @@ event: download
 question: |
   Test
 subquestion: |
-  
   ${ court_bundle.download_buttons_html() }
   
   Or, download as one file:  
   ${ court_bundle.download_button_html() }
   
-# You wouldn't be likely to use attachment code, but you could
-# as long as the documents in the bundle were all created by an
-# attachment block. It won't work if you mix in uploaded files
+  You wouldn't be likely to use attachment code, but you could
+  as long as the documents in the bundle were all created by an
+  attachment block. It won't work if you mix in uploaded files
+  
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="wants_editable">
+    <label class="form-check-label" for="wants_editable">
+      I want the editable copy of the documents
+    </label>
+  </div>
+  
+  <span class="al_email_address form-group row da-field-container da-field-container-datatype-email">
+    <label for="doc_email" class="col-form-label da-form-label datext-right">E-mail</label>
+    <span class="dafieldpart">
+      <input value="${ user_info().email if user_logged_in() else '' }" alt="Input box" class="form-control" type="email" name="doc_email" id="doc_email">
+    </span>
+  </span> ${ action_button_html('javascript:send_docs()', label="Send", icon="envelope", color="primary", size="md", classname="al_send_button") }
+  
+
 attachment code: court_bundle.as_flat_list()
+script: |
+  <script>
+    function send_docs() {
+      var wants_edit = $('#wants_editable')[0].checked;
+      var email = $('#doc_email')[0].value;
+      action_perform("send_court_bundle", {wants_edit, email});
+    };
+  </script>
+css: |
+  <style>
+    .al_email_address, .al_email_address label, .al_email_address input {
+      display: inline-block;
+      width: unset;
+      margin: unset;
+    }
+    .al_send_button {
+      display: inline-block;
+    }
+    .al_send_editable {
+      display: block;
+      width: 100%;
+    }
+  </style>
+---
+event: send_court_bundle
+code: |
+  court_bundle.send_email(to=action_argument('email'), template=document_email, wants_editable=action_argument('wants_edit'), key='final')
+---
+template: document_email
+subject: |
+  Your documents
+content: |
+  Here are all your documents.
+---
+event: send_the_email
+code: |
+  the_attachment = action_argument('al_attachment')
+  send_email(to=al_to_email, attachments=the_attachment, subject="Here are your documents")
 ---
 attachment:
   - variable name: cover_page[i]
@@ -204,7 +257,8 @@ attachment:
 ---
 # This block shows how to create a custom addendum
 # This one will use a Docx instead to demonstrate how tables work in a 
-# docx addendum
+# docx addendum. The addendum is triggered by having multiple
+# people when the user is a minor.
 attachment:
   - variable name: minor_release.addendum
     docx template file: docx_addendum.docx
@@ -248,3 +302,7 @@ event: send_the_email
 code: |
   the_attachment = action_argument('al_attachment')
   send_email(to=al_to_email, attachments=the_attachment, subject="Here are your documents")
+---
+template: email_docs
+content: |
+  ${ action_button_html }

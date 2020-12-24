@@ -1,4 +1,4 @@
-from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html, include_docx_template
+from docassemble.base.util import log, DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html, include_docx_template, send_email
 import re
 
 def label(dictionary):
@@ -430,6 +430,51 @@ class ALDocumentBundle(DAList):
     Returns the nested bundles as a list of PDFs that is only one level deep.
     """
     return [document.as_pdf(key=key) for document in self]
+  
+  def as_editable_list(self, key='final'):
+    """
+    Return a flat list of the editable versions of the docs in this bundle.
+    Not yet tested with editable PDFs.
+    """
+    docs = self.as_flat_list(key=key)
+    editable = []
+    for doc in docs:
+      editable.append(doc.docx if hasattr(doc, 'docx') else doc.pdf)
+    return editable
+  
+  #def sxend_email(self, to='', template='', wants_editable=False, key='final'):
+  #  """
+  #  Send an email with the bundle as a flat document or as editable documents.
+  #  """
+  #  if not wants_editable:
+  #    send_email(to=to, template=template, attachments=self.as_pdf(key=key))
+  #  else:
+  #    send_email(to=to, template=template, attachments=self.as_editable_list(key=key))
+  
+  def send_email(self, **kwargs):  # to='', template='', wants_editable=False, key='final'):
+    """
+    Send an email with the bundle as a single flat pdf or as editable documents.
+    Can be used the same as da `send_email` with two optional additional params.
+    Not tested with editable PDFs.
+    
+    keyword arguments:
+    @param [wants_editable] {bool} Optional. User wants the editable docs. Default: False
+    @param [key] {string} Optional. Which version of the doc. Default: 'final'
+    @param to {string} Same as da send_email `to` - email address(es) or objects with such.
+    @param template {object} Same as da `send_email` `template` variable.
+    """
+    wants_editable = False
+    key = 'final'
+    email_args = {}
+    for a_key, value in kwargs.items():
+      if a_key == 'wants_editable': wants_editable = value
+      elif a_key == 'key': key = value
+      else: email_args[ a_key ] = value
+    
+    if wants_editable:
+      send_email(**email_args, attachments=self.as_editable_list(key=key))
+    else:
+      send_email(**email_args, attachments=self.as_pdf(key=key))
   
   def download_button_html(self, key='final'):
     html = "<table>"
