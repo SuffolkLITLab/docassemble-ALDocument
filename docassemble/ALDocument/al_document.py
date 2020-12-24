@@ -442,7 +442,7 @@ class ALDocumentBundle(DAList):
       editable.append(doc.docx if hasattr(doc, 'docx') else doc.pdf)
     return editable
   
-  def send_bundle_html(self):
+  def send_bundle_action_html(self, action_name):
     """
     Return html for sending this bundle, currently via email.
     Is there a way to use the instanceName to customize the html id to this particular bundle?
@@ -463,12 +463,12 @@ class ALDocumentBundle(DAList):
     <span class="dafieldpart">
       <input value="''' + (user_info().email if user_logged_in() else '') + '''" alt="Input box" class="form-control" type="email" name="al_doc_email_'''+name+'''" id="al_doc_email_'''+name+'''">
     </span>
-  </span>''' + action_button_html('javascript:send_docs()', label="Send", icon="envelope", color="primary", size="md", classname="al_send_email_button", id_tag=("al_send_email_button_"+name)) + '''
+  </span>'''+action_button_html('javascript:send_docs()', label="Send", icon="envelope", color="primary", size="md", classname="al_send_email_button", id_tag=("al_send_email_button_"+name))+'''
   <script>
     function send_docs() {
       var wants_edit = $("#al_wants_editable_'''+name+'''")[0].checked;
       var email = $("#al_doc_email_'''+name+'''")[0].value;
-      action_perform("send_court_bundle", {wants_edit, email});
+      action_perform("'''+action_name+'''", {wants_edit, email});
     };
   </script>
   </div>

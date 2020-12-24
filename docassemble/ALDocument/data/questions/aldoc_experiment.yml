@@ -141,7 +141,7 @@ subquestion: |
   as long as the documents in the bundle were all created by an
   attachment block. It won't work if you mix in uploaded files
   
-  ${ court_bundle.send_bundle_html() }
+  ${ court_bundle.send_bundle_action_html( 'send_court_bundle' ) }
   
 #  <div class='al_send_bundle'>
 #  <div class="form-check">
