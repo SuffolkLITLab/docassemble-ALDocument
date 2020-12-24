@@ -444,11 +444,18 @@ class ALDocumentBundle(DAList):
   
   def send_bundle_action_html(self, event_name):
     """
-    Return html for sending this bundle, currently via email.
-    Is there a way to use the instanceName to customize the html id to this particular bundle?
-    Name leaves room for expanding to sms, etc., in future.
-    Considered making the action a generic object action, but
-    that may be too opaque for a developer to intuit
+    Return html for sending this bundle to the user via email.
+    
+    @param event_name {string} - Name of event to trigger. Can be a
+        generic object event.
+    
+    Development documentation:
+    - Method name leaves room for expanding to sms, etc., in future.
+    - There may not be a way to automate the code to send this particular
+        bundle with this html - javascript breaks the chain because the
+        parameters must be detected at the time of the action.
+    - Considered making the action always a generic object action, but
+        that may be too opaque for a developer to intuit.
     """
     name = re.sub(r'[^A-Za-z0-9]+','_', self.instanceName)
     return '''
@@ -499,10 +506,11 @@ class ALDocumentBundle(DAList):
     Not tested with editable PDFs.
     
     keyword arguments:
-    @param [wants_editable] {bool} Optional. User wants the editable docs. Default: False
-    @param [key] {string} Optional. Which version of the doc. Default: 'final'
-    @param to {string} Same as da send_email `to` - email address(es) or objects with such.
-    @param template {object} Same as da `send_email` `template` variable.
+    @param [wants_editable] {bool} - Optional. User wants the editable docs. Default: False
+    @param [key] {string} - Optional. Which version of the doc. Default: 'final'
+    @param to {string} - Same as da send_email `to` - email address(es) or objects with such.
+    @param template {object} - Same as da `send_email` `template` variable.
+    @param * {*} - Any other parameters you'd send to a da `send_email` function
     """
     wants_editable = False
     key = 'final'
