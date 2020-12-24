@@ -1,4 +1,4 @@
-from docassemble.base.util import log, DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html, include_docx_template, send_email
+from docassemble.base.util import log, DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html, include_docx_template, send_email, user_info, user_logged_in
 import re
 
 def label(dictionary):
@@ -442,16 +442,39 @@ class ALDocumentBundle(DAList):
       editable.append(doc.docx if hasattr(doc, 'docx') else doc.pdf)
     return editable
   
-  #def sxend_email(self, to='', template='', wants_editable=False, key='final'):
-  #  """
-  #  Send an email with the bundle as a flat document or as editable documents.
-  #  """
-  #  if not wants_editable:
-  #    send_email(to=to, template=template, attachments=self.as_pdf(key=key))
-  #  else:
-  #    send_email(to=to, template=template, attachments=self.as_editable_list(key=key))
+  def send_bundle_html(self):
+    """
+    Return html for sending this bundle, currently via email.
+    Is there a way to use the instanceName to customize the html id to this particular bundle?
+    Name leaves room for expanding to sms, etc., in future.
+    """
+    name = self.instanceName
+    return '''
+  <div class="al_send_bundle '''+name+'''" id="al_send_bundle_'''+name+'''" name="al_send_bundle_'''+name+'''">
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" class="al_wants_editable" id="al_wants_editable_'''+name+'''">
+    <label class="al_wants_editable form-check-label" for="al_wants_editable_'''+name+'''">
+      I want the editable copy of the documents
+    </label>
+  </div>
   
-  def send_email(self, **kwargs):  # to='', template='', wants_editable=False, key='final'):
+  <span class="al_email_address '''+name+''' form-group row da-field-container da-field-container-datatype-email">
+    <label for="al_doc_email_'''+name+'''" class="al_doc_email col-form-label da-form-label datext-right">E-mail</label>
+    <span class="dafieldpart">
+      <input value="''' + (user_info().email if user_logged_in() else '') + '''" alt="Input box" class="form-control" type="email" name="al_doc_email_'''+name+'''" id="al_doc_email_'''+name+'''">
+    </span>
+  </span>''' + action_button_html('javascript:send_docs()', label="Send", icon="envelope", color="primary", size="md", classname="al_send_email_button", id_tag=("al_send_email_button_"+name)) + '''
+  <script>
+    function send_docs() {
+      var wants_edit = $("#al_wants_editable_'''+name+'''")[0].checked;
+      var email = $("#al_doc_email_'''+name+'''")[0].value;
+      action_perform("send_court_bundle", {wants_edit, email});
+    };
+  </script>
+  </div>
+    '''
+  
+  def send_email(self, **kwargs):
     """
     Send an email with the bundle as a single flat pdf or as editable documents.
     Can be used the same as da `send_email` with two optional additional params.
