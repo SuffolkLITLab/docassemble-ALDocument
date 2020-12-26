@@ -12,16 +12,24 @@ code: |
     people.gather()
     # debug_minor_addendum
   preview
-  log( court_bundle.as_pdf(), 'console' )
+  cover_page.there_is_another = False
+  cover_page.gathered = True
+  template2.there_is_another = False
+  template2.gathered = True
+  minor_release.there_is_another = False
+  minor_release.gathered = True
   download
 ---
 modules:
   - .al_document
 ---
+include:
+  - al_document.yml
+---
 objects:
-  - cover_page: ALDocument.using(title="Cover page", filename="cover_page", has_addendum=False)
-  - template2: ALDocument.using(title="Template 2", filename="template2", has_addendum=True, default_overflow_message = " (see addendum)")
-  - minor_release: ALDocument.using(title="Release form", filename="release", has_addendum=True)
+  - cover_page: ALDocument.using(title="Cover page", filename="cover_page", has_addendum=False, auto_gather=False, gathered=True, there_is_another=False)
+  - template2: ALDocument.using(title="Template 2", filename="template2", has_addendum=True, default_overflow_message = " (see addendum)", auto_gather=False, gathered=True, there_is_another=False)
+  - minor_release: ALDocument.using(title="Release form", filename="release", has_addendum=True, auto_gather=False, gathered=True, there_is_another=False)
   - field4: DAList.using(there_are_any=True)
   - people: DAList.using(object_type=Individual,there_are_any=True)
 ---
@@ -128,9 +136,6 @@ question: |
   Look at the document below before you sign it
 subquestion: |
   ${ court_bundle.preview() }
----
-include:
-  - al_document.yml
 ---
 event: download
 question: |
