@@ -44,33 +44,22 @@ content: |
 generic object: ALDocument
 template: x.al_view_button
 content: |
-  ${ action_button_html(x.as_pdf().url_for(), label=":eye: View", color="secondary") }
+  ${ action_button_html(x.as_pdf().url_for(), label="View", icon="eye", color="secondary") }
 ---
 generic object: ALDocument
 template: x.al_download_button
 content: |
-  ${ action_button_html(x.as_pdf().url_for(attachment=True), label=":download: Download", color="primary") }
+  ${ action_button_html(x.as_pdf().url_for(attachment=True), label="Download", icon="download", color="primary") }
 ---
 generic object: ALDocumentBundle
 template: x.al_view_button
 content: |
-  ${ action_button_html(x.as_pdf().url_for(), label=":eye: View") }
+  ${ action_button_html(x.as_pdf().url_for(), label="View", icon="eye", color="secondary") }
 ---
 generic object: ALDocumentBundle
 template: x.al_download_button
 content: |
-  ${ action_button_html(x.as_pdf().url_for(attachment=True), label=":download: Download") }
----
-code: |
-  # http://www.java2s.com/Code/Python/Class/Printoutclasstree.htm
-  def classtree(cls, indent):
-    log( (('_'*indent) + str(cls.__name__)), 'console' )  # print class name here
-    for supercls in cls.__bases__:  # recur to all superclasses
-        classtree(supercls, indent+1)  # may visit super > once
-
-  def instancetree(inst):
-    log(('Tree of ' + str(type(inst).__class__)), 'console' )  # show instance
-    classtree(inst.__class__, 1)  # climb to its class
+  ${ action_button_html(x.as_pdf().url_for(attachment=True), label="Download", icon="download", color="primary") }
 ---
 generic object: ALDocumentBundle
 template: x.composite_experiment
