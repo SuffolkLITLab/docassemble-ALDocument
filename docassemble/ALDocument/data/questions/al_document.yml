@@ -1,0 +1,145 @@
+---
+# AL separate pdfs table: list every ALDocument in an
+# ALDocumentBundle by putting this in your `subquestion`:
+# ${ attorney_bundle.al_download_each_pdf_table }
+# See https://docassemble.org/docs/modifiers.html#generic%20object
+# 
+# It uses the `x.al_view_button` and `x.al_download_button`
+# templates.
+# To make your own version, copy, paste, and modify the
+# `content: |` of the below.
+# 
+# Notes:
+# 1. `div` at the top allows flexible styling of the table.
+# 2. The first two rows of the table are the header row
+# (which is hidden by css) and the invisible alignment row.
+# 3. The 'table css' template at the bottom adds styles
+# for the table in general
+generic object: ALDocumentBundle
+template: x.as_pdf_list_table
+content: |
+  <div class='al_table_css_sibling' id='al_table_separate_${ x.html_safe_name() }'></div>
+  
+  &nbsp; | &nbsp; | &nbsp; | &nbsp;
+  :-|:-|-:|-:
+  % for doc in x:
+  % if doc.enabled:
+  :file: | ${ doc.title } | ${ doc.al_view_button } | ${ doc.al_download_button }
+  % endif
+  % endfor
+  
+  ${ x.al_download_table_css }
+---
+generic object: ALDocumentBundle
+template: x.as_pdf_table
+content: |
+  <div class='al_table_css_sibling' id='al_table_merged_${ x.html_safe_name() }'></div>
+  
+  &nbsp; | &nbsp; | &nbsp; | &nbsp;
+  :-|:-|-:|-:
+  :file: | ${ x.title } | ${ x.al_view_button } | ${ x.al_download_button }
+---
+# Notes:
+# 1. It might be better to move this into a css file,
+# but that would need an additional import. Unfortunately,
+# it will be harder for people to override these styles
+# using their own css file, though it can still be done
+# 2. Could show how to abstract this into another template
+# to allow easier custom css that you can see at the bottom.
+generic object: ALDocumentBundle
+template: x.al_download_table_css
+content: |
+  <style>
+    .al_table_css_sibling + div thead {
+      display: none;
+    }
+    
+    /*.al_table_css_sibling + div tr {
+      background: rgb(245, 245, 200);
+    }*/
+    
+    .al_table_css_sibling + div td {
+      padding: .3em;
+      vertical-align: text-top;
+    }
+    td.text-left:first-child {
+      width: 1em;
+      padding-left: .5em;
+    }
+    .al_table_css_sibling + div td.text-left + td.text-right {
+      width: 5em;
+    }
+    .al_table_css_sibling + div td.text-right {
+      width: 7em;
+    }
+    
+    .al_table_css_sibling + div a {
+      margin: 0em;
+    }
+    
+    /*#al_table_separate_${ x.html_safe_name() } + div tr {
+      background: rgb(245, 200, 200);
+    }*/
+  </style>
+---
+generic object: ALDocument
+template: x.al_view_button
+content: |
+  ${ action_button_html(x.as_pdf().url_for(), label=":eye: View") }
+---
+generic object: ALDocument
+template: x.al_download_button
+content: |
+  ${ action_button_html(x.as_pdf().url_for(attachment=True), label=":download: Download") }
+---
+generic object: ALDocumentBundle
+template: x.al_view_button
+content: |
+  ${ action_button_html(x.as_pdf().url_for(), label=":eye: View") }
+---
+generic object: ALDocumentBundle
+template: x.al_download_button
+content: |
+  ${ action_button_html(x.as_pdf().url_for(attachment=True), label=":download: Download") }
+---
+generic object: ALDocumentBundle
+template: x.composite_experiment
+content: |
+  <div class='al_table_css_sibling' id='al_table_separate_${ x.html_safe_name() }'></div>
+  
+  &nbsp; | &nbsp; | &nbsp; | &nbsp;
+  :-|:-|-:|-:
+  ${ x.as_pdf_list_rows }
+  % if len([doc for doc in x if doc.enabled]) > 1:
+  ${ x.as_pdf_row }
+  % endif
+  
+  ${ x.custom_download_table_css }
+---
+# Couldn't figure out how to make a template for buttons by
+# using `.as_pdf_list()` because of `intrinsictName` issues
+generic object: ALDocumentBundle
+template: x.as_pdf_list_rows
+content: |
+  % for doc in x:
+  % if doc.enabled:
+  :file: | ${ doc.title } | ${ doc.al_view_button } | ${ doc.al_download_button }
+  % endif
+  % endfor
+---
+generic object: ALDocumentBundle
+template: x.as_pdf_row
+content: |
+  :file: | ${ x.title } | ${ x.al_view_button } | ${ x.al_download_button }
+---
+generic object: ALDocumentBundle
+template: x.custom_download_table_css
+content: |
+  ${ x.al_download_table_css }
+  
+  <style>
+    /* Could abstract this into another template to allow easier custom css */
+    #al_table_separate_${ x.html_safe_name() } + div tr {
+      background: rgb(220, 220, 245); }
+  </style>
+---
