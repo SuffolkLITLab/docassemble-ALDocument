@@ -1,4 +1,8 @@
 ---
+features:
+  css:
+    - al_document.css
+---
 # AL separate pdfs table: list every ALDocument in an
 # ALDocumentBundle by putting this in your `subquestion`:
 # ${ attorney_bundle.al_download_each_pdf_table }
@@ -27,8 +31,6 @@ content: |
   :file: | ${ doc.title } | ${ doc.al_view_button } | ${ doc.al_download_button }
   % endif
   % endfor
-  
-  ${ x.al_download_table_css }
 ---
 generic object: ALDocumentBundle
 template: x.as_pdf_table
@@ -38,49 +40,6 @@ content: |
   &nbsp; | &nbsp; | &nbsp; | &nbsp;
   :-|:-|-:|-:
   :file: | ${ x.title } | ${ x.al_view_button } | ${ x.al_download_button }
----
-# Notes:
-# 1. It might be better to move this into a css file,
-# but that would need an additional import. Unfortunately,
-# it will be harder for people to override these styles
-# using their own css file, though it can still be done
-# 2. Could show how to abstract this into another template
-# to allow easier custom css that you can see at the bottom.
-generic object: ALDocumentBundle
-template: x.al_download_table_css
-content: |
-  <style>
-    .al_table_css_sibling + div thead {
-      display: none;
-    }
-    
-    /*.al_table_css_sibling + div tr {
-      background: rgb(245, 245, 200);
-    }*/
-    
-    .al_table_css_sibling + div td {
-      padding: .3em;
-      vertical-align: text-top;
-    }
-    td.text-left:first-child {
-      width: 1em;
-      padding-left: .5em;
-    }
-    .al_table_css_sibling + div td.text-left + td.text-right {
-      width: 5em;
-    }
-    .al_table_css_sibling + div td.text-right {
-      width: 7em;
-    }
-    
-    .al_table_css_sibling + div a {
-      margin: 0em;
-    }
-    
-    /*#al_table_separate_${ x.html_safe_name() } + div tr {
-      background: rgb(245, 200, 200);
-    }*/
-  </style>
 ---
 generic object: ALDocument
 template: x.al_view_button
@@ -132,13 +91,12 @@ template: x.as_pdf_row
 content: |
   :file: | ${ x.title } | ${ x.al_view_button } | ${ x.al_download_button }
 ---
+# This css can use ids to get very fine-grained
+# about its styles. Not sure this is worth it.
 generic object: ALDocumentBundle
 template: x.custom_download_table_css
 content: |
-  ${ x.al_download_table_css }
-  
   <style>
-    /* Could abstract this into another template to allow easier custom css */
     #al_table_separate_${ x.html_safe_name() } + div tr {
       background: rgb(220, 220, 245); }
   </style>

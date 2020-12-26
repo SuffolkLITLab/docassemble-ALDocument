@@ -41,7 +41,7 @@ fields:
 # The document bundle needs to be in a different objects block
 # because it relies on the template variables being initialized
 objects:
-  - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="Pages to download and deliver to court")
+  - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="One file to deliver to court")
 ---
 question: |
   Experiment with overflow
@@ -142,9 +142,8 @@ subquestion: |
   Download as one file:
   ${ court_bundle.as_pdf_table }
   
-# Takes too long to load with too many tables present  
 #  ---
-#  
+# Takes too long to load with too many tables present and an addendum
 #  ${ court_bundle.composite_experiment }
 #  
 # You wouldn't be likely to use attachment code, but you could
