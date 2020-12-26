@@ -12,6 +12,7 @@ code: |
     people.gather()
     # debug_minor_addendum
   preview
+  log( court_bundle.as_pdf(), 'console' )
   download
 ---
 modules:
@@ -40,7 +41,7 @@ fields:
 # The document bundle needs to be in a different objects block
 # because it relies on the template variables being initialized
 objects:
-  - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="Forms to download and deliver to court")
+  - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="Pages to download and deliver to court")
 ---
 question: |
   Experiment with overflow
@@ -128,16 +129,24 @@ question: |
 subquestion: |
   ${ court_bundle.preview() }
 ---
+include:
+  - al_document.yml
+---
 event: download
 question: |
   Test
 subquestion: |
+
+  ${ court_bundle.as_pdf_list_table }
   
-  ${ court_bundle.download_buttons_html() }
+  Download as one file:
+  ${ court_bundle.as_pdf_table }
   
-  Or, download as one file:  
-  ${ court_bundle.download_button_html() }
-  
+# Takes too long to load with too many tables present  
+#  ---
+#  
+#  ${ court_bundle.composite_experiment }
+#  
 # You wouldn't be likely to use attachment code, but you could
 # as long as the documents in the bundle were all created by an
 # attachment block. It won't work if you mix in uploaded files

@@ -1,4 +1,4 @@
-from docassemble.base.util import DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html, include_docx_template
+from docassemble.base.util import log, DADict, DAList, DAObject, DAFile, DAFileCollection, DAFileList, defined, value, pdf_concatenate, DAOrderedDict, action_button_html, include_docx_template
 import re
 
 def label(dictionary):
@@ -23,6 +23,12 @@ def safeattr(object, key):
       return ''
   except:
     return ""
+
+def html_safe_str( the_string ):
+  """
+  Return a string that can be used as an html class or id
+  """
+  return re.sub( r'[^A-Za-z0-9]+', '_', the_string )
   
 class ALAddendumField(DAObject):
   """
@@ -349,7 +355,11 @@ class ALDocument(DADict):
 
   def as_list(self, key='final'):
     if self.has_addendum and self.has_overflow():
-      return [self[key], self.addendum]
+      doc = self[key]
+      doc.instanceName = self[key].instanceName
+      addendum = self.addendum
+      addendum.instanceName = self.addendum.instanceName
+      return [doc, addendum]
     else:
       return [self[key]]
     
@@ -367,6 +377,13 @@ class ALDocument(DADict):
     if overflow_message is None:
       overflow_message = self.default_overflow_message
     return self.overflow_fields[field_name].safe_value(overflow_message=overflow_message, preserve_newlines=preserve_newlines)
+  
+  def html_safe_name( self, prefix='', suffix='' ):
+    """
+    Return the instance name a string that can be used
+    as an html class or id to facilitate instance-specific css.
+    """
+    return html_safe_str(prefix) + html_safe_str(self.instanceName) + html_safe_str(suffix)
 
 class ALDocumentBundle(DAList):
   """
@@ -417,11 +434,11 @@ class ALDocumentBundle(DAList):
     # Otherwise, call the bundle's as_list() method to show all enabled templates.
     # Unpack the list of documents at each step so this can be concatenated into a single list
     flat_list = []
-    for document in self:
-      if isinstance(document, ALDocumentBundle):
-        flat_list.extend(document.as_list(key=key))
-      elif document.enabled: # base case
-        flat_list.extend(document.as_list(key=key))
+    for item in self:
+      if isinstance(item, ALDocumentBundle):
+        flat_list.extend(item.as_list(key=key))
+      elif item.enabled: # base case
+        flat_list.extend(item.as_list(key=key))
                          
     return flat_list
  
@@ -441,7 +458,9 @@ class ALDocumentBundle(DAList):
     html += "</tr>"        
     html += "</table>"
     return html
-    
+  
+  def download_each_pdf_table(self, key='final'):
+    return value( self.instanceName + '.al_download_each_pdf_table' )
   
   def download_buttons_html(self, key='final'):
     html = "<table>"
@@ -453,6 +472,13 @@ class ALDocumentBundle(DAList):
       html += "</tr>"        
     html += "</table>"
     return html
+  
+  def html_safe_name( self, prefix='', suffix='' ):
+    """
+    Return the instance name a string that can be used
+    as an html class or id to facilitate instance-specific css.
+    """
+    return html_safe_str(prefix) + html_safe_str(self.instanceName) + html_safe_str(suffix)
     
 class ALDocumentBundleDict(DADict):
   """
