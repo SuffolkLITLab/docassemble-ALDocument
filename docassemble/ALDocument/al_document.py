@@ -29,6 +29,26 @@ def html_safe_str( the_string ):
   Return a string that can be used as an html class or id
   """
   return re.sub( r'[^A-Za-z0-9]+', '_', the_string )
+
+def table_row( obj, key='final' ):
+  """
+  Return a string of html that is one row of a table containing
+  the `.as_pdf()` contents of an AL object and it's interaction buttons
+  """
+  pdf = obj.as_pdf(key=key)
+  
+  html = '\n\t<tr>'
+  html += '\n\t\t<td><i class="fas fa-file"></i>&nbsp;&nbsp;</td>'
+  html += '\n\t\t<td>' + obj.title + '&nbsp;&nbsp;</td>'
+  html += '\n\t\t<td>'
+  html += action_button_html( pdf.url_for(), label=word("View"), icon="eye", color="secondary" )
+  html += '&nbsp;&nbsp;</td>'
+  html += '\n\t\t<td>'
+  html += action_button_html( pdf.url_for(attachment=True), label=word("Download"), icon="download", color="primary" )
+  html += '</td>'
+  html += '\n\t</tr>'
+
+  return html
   
 class ALAddendumField(DAObject):
   """
@@ -439,45 +459,29 @@ class ALDocumentBundle(DAList):
   
   def as_pdf_list_table(self, key='final'):
     """
-    Returns markdown of a styled html table to display a list
+    Returns string of a table to display a list
     of pdfs with 'view' and 'download' buttons.
     """
-    markdown = "<div class='al_table_css_sibling' "
-    markdown += "id='al_table_merged_" + html_safe_str(self.instanceName)
-    markdown += "'></div>"
-    # heading row - hidden, but necessary
-    markdown += "\n\n&nbsp; | &nbsp; | &nbsp; | &nbsp;"
-    markdown += "\n:-|:-|-:|-:"
+    html ='<table class="al_table" id="' + html_safe_str(self.instanceName) + '">'
     
     for doc in self:
-      markdown += "\n:file: | "
-      markdown += doc.title + " | "
-      markdown += action_button_html(doc.as_pdf(key=key).url_for(), label=word("View"), icon="eye", color="secondary") + " | "
-      markdown += action_button_html(doc.as_pdf(key=key).url_for(attachment=True), label=word("Download"), icon="download", color="primary")
+      html += table_row( doc, key )
     
-    # Discuss: if there are multiple docs, add the `as_pdf` row
+    html += '\n</table>'
     
-    markdown += "\n\n" + self.table_css() + "\n\n"
-    return markdown
+    # Discuss: Do we want a table with the ability to have a merged pdf row?
+    return html
   
   def as_pdf_table(self, key='final'):
     """
-    Returns markdown of styled html table to display all the docs
+    Returns a string of a table to display all the docs
     combined into one pdf with 'view' and 'download' buttons.
     """
-    markdown = "<div class='al_table_css_sibling' "
-    markdown += "id='al_table_merged_" + html_safe_str(self.instanceName)
-    markdown += "'></div>"
-    # heading row - hidden, but necessary
-    markdown += "\n\n&nbsp; | &nbsp; | &nbsp; | &nbsp;"
-    markdown += "\n:-|:-|-:|-:"
-    markdown += "\n:file: | "
-    markdown += self.title + " | "
-    markdown += action_button_html(self.as_pdf(key=key).url_for(), label=word("View"), icon="eye", color="secondary") + " | "
-    markdown += action_button_html(self.as_pdf(key=key).url_for(attachment=True), label=word("Download"), icon="download", color="primary")
+    html ='<table class="al_table merged_docs" id="' + html_safe_str(self.instanceName) + '">'
+    html += table_row( self, key )
+    html += '\n</table>'
     
-    markdown += "\n\n" + self.table_css() + "\n\n"
-    return markdown
+    return html
   
   def table_css(self):
     """
