@@ -40,7 +40,7 @@ fields:
 # The document bundle needs to be in a different objects block
 # because it relies on the template variables being initialized
 objects:
-  - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="All forms to deliver to court")
+  - court_bundle: ALDocumentBundle.using(elements=[cover_page,template2,minor_release], filename="court_bundle.pdf", title="Full document")
 ---
 question: |
   Experiment with overflow
@@ -135,7 +135,7 @@ subquestion: |
   
   ${ court_bundle.as_pdf_table() }
   
-  Each document by itself:
+  Each file by itself:
   ${ court_bundle.as_pdf_list_table() }
   
 # You wouldn't be likely to use attachment code, but you could

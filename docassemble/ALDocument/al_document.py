@@ -450,10 +450,11 @@ class ALDocumentBundle(DAList):
     markdown += "\n:-|:-|-:|-:"
     
     for doc in self:
+      pdf = doc.as_pdf(key=key)
       markdown += "\n:file: | "
       markdown += doc.title + " | "
-      markdown += action_button_html(doc.as_pdf(key=key).url_for(), label=word("View"), icon="eye", color="secondary") + " | "
-      markdown += action_button_html(doc.as_pdf(key=key).url_for(attachment=True), label=word("Download"), icon="download", color="primary")
+      markdown += action_button_html(pdf.url_for(), label=word("View"), icon="eye", color="secondary") + " | "
+      markdown += action_button_html(pdf.url_for(attachment=True), label=word("Download"), icon="download", color="primary")
     
     # Discuss: if there are multiple docs, add the `as_pdf` row
     
@@ -465,6 +466,7 @@ class ALDocumentBundle(DAList):
     Returns markdown of styled html table to display all the docs
     combined into one pdf with 'view' and 'download' buttons.
     """
+    pdf = self.as_pdf(key=key)
     markdown = "<div class='al_table_css_sibling' "
     markdown += "id='al_table_merged_" + html_safe_str(self.instanceName)
     markdown += "'></div>"
@@ -473,8 +475,8 @@ class ALDocumentBundle(DAList):
     markdown += "\n:-|:-|-:|-:"
     markdown += "\n:file: | "
     markdown += self.title + " | "
-    markdown += action_button_html(self.as_pdf(key=key).url_for(), label=word("View"), icon="eye", color="secondary") + " | "
-    markdown += action_button_html(self.as_pdf(key=key).url_for(attachment=True), label=word("Download"), icon="download", color="primary")
+    markdown += action_button_html(pdf.url_for(), label=word("View"), icon="eye", color="secondary") + " | "
+    markdown += action_button_html(pdf.url_for(attachment=True), label=word("Download"), icon="download", color="primary")
     
     markdown += "\n\n" + self.table_css() + "\n\n"
     return markdown
