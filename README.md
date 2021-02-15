@@ -23,3 +23,6 @@ documents. Bundles can be nested for convenience.
 ALDocumentBundle.download_buttons_html() generates a table with download/view
 buttons for the generated document, a slightly neater format than the 
 docassemble default when there is a larger list of documents.
+
+This package is deprecated; the functionality has been migrated to 
+https://github.com/SuffolkLITLab/docassemble-AssemblyLine
